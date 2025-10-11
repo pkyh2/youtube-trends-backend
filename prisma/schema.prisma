@@ -1,0 +1,33 @@
+// Prisma Schema for YouTube Trends API
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Video {
+  id            String   @id @default(cuid())
+  videoId       String   @unique
+  title         String
+  channelTitle  String
+  thumbnailUrl  String
+  viewCount     BigInt
+  publishedAt   DateTime
+  duration      Int      // Duration in seconds
+  aspectRatio   String   // "9:16" for shorts, "16:9" for long-form
+  type          String   // "shorts" or "long"
+  categoryId    String
+  regionCode    String   @default("KR")
+  rank          Int      // Rank in trending (1-10)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([type, categoryId, regionCode, rank])
+  @@index([videoId])
+  @@index([updatedAt])
+  @@map("videos")
+}
