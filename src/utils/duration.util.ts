@@ -18,14 +18,16 @@ export function parseISO8601Duration(duration: string): number {
 
 /**
  * Determine aspect ratio from video dimension
- * YouTube API doesn't provide exact aspect ratio, so we estimate based on common patterns
+ * Note: YouTube API doesn't provide exact aspect ratio through contentDetails.dimension
+ * The dimension field only indicates "2d" or "3d", not orientation.
+ *
+ * For accurate Shorts detection, use HTTP status code check instead.
+ * This function is kept for backward compatibility but is not accurate.
+ *
+ * @deprecated Use HTTP-based Shorts detection in YouTubeService instead
  */
 export function estimateAspectRatio(dimension: string, duration: number): string {
-  // If video is very short (< 3 min), likely a short-form vertical video
-  if (duration <= 180) {
-    return '9:16';
-  }
-
   // Default to standard widescreen
+  // Note: This is an estimation and should not be relied upon for Shorts detection
   return '16:9';
 }

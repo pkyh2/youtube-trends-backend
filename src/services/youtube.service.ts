@@ -1,8 +1,33 @@
 import { youtube, YOUTUBE_CONFIG } from '../config/youtube.config';
 import { VideoData, YouTubeVideo, VideoType } from '../types/youtube.types';
-import { parseISO8601Duration, estimateAspectRatio } from '../utils/duration.util';
+import { parseISO8601Duration } from '../utils/duration.util';
 
 export class YouTubeService {
+  /**
+   * Check if a video is a YouTube Short by testing the /shorts/ URL
+   * Returns true if status is 200 (Short), false if 303 (regular video)
+   */
+  private async checkIfShort(videoId: string): Promise<boolean> {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+
+      const response = await fetch(`https://www.youtube.com/shorts/${videoId}`, {
+        method: 'HEAD',
+        redirect: 'manual', // Don't follow redirects
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      // 200 = Short, 303 = Regular video (redirects to /watch)
+      return response.status === 200;
+    } catch (error) {
+      console.warn(`Failed to check if ${videoId} is short:`, error);
+      return false; // Default to regular video on error
+    }
+  }
+
   /**
    * Fetch trending videos from YouTube API
    */
@@ -24,37 +49,44 @@ export class YouTubeService {
         return [];
       }
 
-      // Step 2: Process and filter videos
-      const videos: VideoData[] = [];
+      // Step 2: Check all videos for Shorts status in parallel
+      const videoPromises = response.data.items.map(async (item, i) => {
+        const typedItem = item as YouTubeVideo;
 
-      for (let i = 0; i < response.data.items.length; i++) {
-        const item = response.data.items[i] as YouTubeVideo;
-
-        if (!item.id || !item.snippet || !item.statistics || !item.contentDetails) {
-          continue;
+        if (!typedItem.id || !typedItem.snippet || !typedItem.statistics || !typedItem.contentDetails) {
+          return null;
         }
 
-        const duration = parseISO8601Duration(item.contentDetails.duration);
-        const aspectRatio = estimateAspectRatio(item.contentDetails.dimension, duration);
-        const type = this.determineVideoType(duration, aspectRatio);
+        const duration = parseISO8601Duration(typedItem.contentDetails.duration);
+
+        // Check if video is a Short using HTTP status code method
+        const isShort = await this.checkIfShort(typedItem.id);
+        const type: VideoType = isShort ? 'shorts' : 'long';
+        const aspectRatio = isShort ? '9:16' : '16:9';
 
         const videoData: VideoData = {
-          videoId: item.id,
-          title: item.snippet.title,
-          channelTitle: item.snippet.channelTitle,
-          thumbnailUrl: item.snippet.thumbnails.high.url,
-          viewCount: BigInt(item.statistics.viewCount || '0'),
-          publishedAt: new Date(item.snippet.publishedAt),
+          videoId: typedItem.id,
+          title: typedItem.snippet.title,
+          channelTitle: typedItem.snippet.channelTitle,
+          thumbnailUrl: typedItem.snippet.thumbnails.high.url,
+          viewCount: BigInt(typedItem.statistics.viewCount || '0'),
+          publishedAt: new Date(typedItem.snippet.publishedAt),
           duration,
           aspectRatio,
           type,
-          categoryId: item.snippet.categoryId,
+          categoryId: typedItem.snippet.categoryId,
           regionCode,
           rank: i + 1, // Rank based on position in trending list
         };
 
-        videos.push(videoData);
-      }
+        return videoData;
+      });
+
+      // Wait for all parallel checks to complete
+      const allVideos = await Promise.all(videoPromises);
+
+      // Filter out null entries
+      const videos = allVideos.filter((video): video is VideoData => video !== null);
 
       return videos;
     } catch (error) {
@@ -73,16 +105,6 @@ export class YouTubeService {
     return this.fetchTrendingVideos(regionCode, categoryId);
   }
 
-  /**
-   * Determine video type (shorts or long-form)
-   * Shorts: duration <= 180s AND aspectRatio is 9:16
-   */
-  private determineVideoType(duration: number, aspectRatio: string): VideoType {
-    if (duration <= YOUTUBE_CONFIG.SHORTS_MAX_DURATION && aspectRatio === YOUTUBE_CONFIG.SHORTS_ASPECT_RATIO) {
-      return 'shorts';
-    }
-    return 'long';
-  }
 
   /**
    * Filter videos by type
