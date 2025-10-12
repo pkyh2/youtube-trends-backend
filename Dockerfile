@@ -7,8 +7,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies (production only)
-RUN npm ci --only=production && \
+# Install all dependencies (including dev dependencies for TypeScript build)
+RUN npm ci && \
     npm cache clean --force
 
 # Generate Prisma client
@@ -28,10 +28,13 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Copy package files and install production dependencies only
+COPY package*.json ./
+RUN npm ci --only=production && \
+    npm cache clean --force
+
 # Copy built artifacts from builder
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/prisma ./prisma
 
 # Expose application port
