@@ -7,6 +7,14 @@ import { VideoData, YouTubeVideo, VideoType } from "../types/youtube.types";
 import { parseISO8601Duration } from "../utils/duration.util";
 
 export class YouTubeService {
+  async getLanguages(): Promise<any> {
+    const response = await youtube.i18nRegions.list({
+      part: ["snippet"],
+      hl: "ko",
+    });
+    return response.data.items;
+  }
+
   async getMostPopularVideos(
     regionCode: string = YOUTUBE_CONFIG.DEFAULT_REGION
   ): Promise<any> {
@@ -28,12 +36,31 @@ export class YouTubeService {
     regionCode: string = YOUTUBE_CONFIG.DEFAULT_REGION
   ): Promise<any> {
     const response = await youtube.videos.list({
-      part: ["snippet", "statistics", "contentDetails", "player"],
+      part: [
+        "snippet",
+        "statistics",
+        "contentDetails",
+        "player",
+        "status",
+        "paidProductPlacementDetails",
+        "topicDetails",
+        "recordingDetails",
+      ],
       chart: "mostPopular",
       regionCode: regionCode,
       maxResults: YOUTUBE_CONFIG.MAX_RESULTS,
+      videoCategoryId: "20",
+      maxWidth: 1280,
+      maxHeight: 720,
     });
 
+    const contentTitles = response.data.items?.map((item) => {
+      return {
+        title: item.snippet?.title ?? "",
+        statistics: item.statistics,
+      };
+    });
+    // console.log(contentTitles);
     return response.data;
   }
 

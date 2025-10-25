@@ -1,6 +1,6 @@
-import { Request, Response } from 'express';
-import prisma from '../config/database';
-import { VideoType } from '../types/youtube.types';
+import { Request, Response } from "express";
+import prisma from "../config/database";
+import { VideoType } from "../types/youtube.types";
 
 export class TrendsController {
   /**
@@ -9,45 +9,49 @@ export class TrendsController {
   async getPopularVideos(req: Request, res: Response): Promise<void> {
     try {
       const type = req.query.type as VideoType | undefined;
-      const regionCode = (req.query.regionCode as string) || 'KR';
+      const regionCode = (req.query.regionCode as string) || "KR";
 
-      if (type && type !== 'shorts' && type !== 'long') {
+      if (type && type !== "shorts" && type !== "long") {
         res.status(400).json({
           error: 'Invalid type parameter. Must be "shorts" or "long"',
         });
         return;
       }
 
-      const whereClause: any = { regionCode };
+      const whereClause: any = { region_code: regionCode };
       if (type) {
         whereClause.type = type;
       }
 
       const videos = await prisma.video.findMany({
         where: whereClause,
-        orderBy: { rank: 'asc' },
+        orderBy: { rank: "asc" },
         take: 10,
       });
 
       res.json({
         success: true,
         count: videos.length,
-        data: videos.map(video => ({
-          videoId: video.videoId,
+        data: videos.map((video) => ({
+          videoId: video.video_id,
           title: video.title,
-          channelTitle: video.channelTitle,
-          thumbnailUrl: video.thumbnailUrl,
-          viewCount: video.viewCount.toString(),
-          publishedAt: video.publishedAt,
+          channelTitle: video.channel_title,
+          thumbnailUrl: video.thumbnail_url,
+          viewCount: video.view_count.toString(),
+          likeCount: video.like_count.toString(),
+          commentCount: video.comment_count.toString(),
+          publishedAt: video.published_at,
           duration: video.duration,
+          aspectRatio: video.aspect_ratio,
           type: video.type,
+          categoryId: video.category_id,
           rank: video.rank,
         })),
       });
     } catch (error) {
-      console.error('Error fetching popular videos:', error);
+      console.error("Error fetching popular videos:", error);
       res.status(500).json({
-        error: 'Failed to fetch popular videos',
+        error: "Failed to fetch popular videos",
       });
     }
   }
@@ -59,9 +63,9 @@ export class TrendsController {
     try {
       const { categoryId } = req.params;
       const type = req.query.type as VideoType | undefined;
-      const regionCode = (req.query.regionCode as string) || 'KR';
+      const regionCode = (req.query.regionCode as string) || "KR";
 
-      if (type && type !== 'shorts' && type !== 'long') {
+      if (type && type !== "shorts" && type !== "long") {
         res.status(400).json({
           error: 'Invalid type parameter. Must be "shorts" or "long"',
         });
@@ -69,8 +73,8 @@ export class TrendsController {
       }
 
       const whereClause: any = {
-        categoryId,
-        regionCode,
+        category_id: categoryId,
+        region_code: regionCode,
       };
 
       if (type) {
@@ -79,7 +83,7 @@ export class TrendsController {
 
       const videos = await prisma.video.findMany({
         where: whereClause,
-        orderBy: { rank: 'asc' },
+        orderBy: { rank: "asc" },
         take: 10,
       });
 
@@ -87,58 +91,26 @@ export class TrendsController {
         success: true,
         count: videos.length,
         categoryId,
-        data: videos.map(video => ({
-          videoId: video.videoId,
+        data: videos.map((video) => ({
+          videoId: video.video_id,
           title: video.title,
-          channelTitle: video.channelTitle,
-          thumbnailUrl: video.thumbnailUrl,
-          viewCount: video.viewCount.toString(),
-          publishedAt: video.publishedAt,
+          channelTitle: video.channel_title,
+          thumbnailUrl: video.thumbnail_url,
+          viewCount: video.view_count.toString(),
+          likeCount: video.like_count.toString(),
+          commentCount: video.comment_count.toString(),
+          publishedAt: video.published_at,
           duration: video.duration,
+          aspectRatio: video.aspect_ratio,
           type: video.type,
+          categoryId: video.category_id,
           rank: video.rank,
         })),
       });
     } catch (error) {
-      console.error('Error fetching videos by category:', error);
+      console.error("Error fetching videos by category:", error);
       res.status(500).json({
-        error: 'Failed to fetch videos by category',
-      });
-    }
-  }
-
-  /**
-   * GET /api/trends/categories
-   */
-  async getCategories(req: Request, res: Response): Promise<void> {
-    try {
-      // YouTube video categories (commonly used)
-      const categories = [
-        { id: '1', name: 'Film & Animation' },
-        { id: '2', name: 'Autos & Vehicles' },
-        { id: '10', name: 'Music' },
-        { id: '15', name: 'Pets & Animals' },
-        { id: '17', name: 'Sports' },
-        { id: '19', name: 'Travel & Events' },
-        { id: '20', name: 'Gaming' },
-        { id: '22', name: 'People & Blogs' },
-        { id: '23', name: 'Comedy' },
-        { id: '24', name: 'Entertainment' },
-        { id: '25', name: 'News & Politics' },
-        { id: '26', name: 'Howto & Style' },
-        { id: '27', name: 'Education' },
-        { id: '28', name: 'Science & Technology' },
-      ];
-
-      res.json({
-        success: true,
-        count: categories.length,
-        data: categories,
-      });
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      res.status(500).json({
-        error: 'Failed to fetch categories',
+        error: "Failed to fetch videos by category",
       });
     }
   }

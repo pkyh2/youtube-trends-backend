@@ -8,7 +8,7 @@ export class TestController {
    */
   async getTest1(req: Request, res: Response): Promise<void> {
     try {
-      const result = await youtubeService.getCategories(
+      const result = await youtubeService.getMostPopularVideo(
         YOUTUBE_CONFIG.DEFAULT_REGION
       );
 

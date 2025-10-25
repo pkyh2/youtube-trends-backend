@@ -1,7 +1,7 @@
-import cron from 'node-cron';
-import { youtubeService } from '../services/youtube.service';
-import prisma from '../config/database';
-import { VideoData } from '../types/youtube.types';
+import cron from "node-cron";
+import { youtubeService } from "../services/youtube.service";
+import prisma from "../config/database";
+import { VideoData } from "../types/youtube.types";
 
 export class TrendsJob {
   private isRunning = false;
@@ -11,7 +11,7 @@ export class TrendsJob {
    */
   async updateTrendsData(): Promise<void> {
     if (this.isRunning) {
-      console.log('Trends update already in progress, skipping...');
+      console.log("Trends update already in progress, skipping...");
       return;
     }
 
@@ -19,14 +19,14 @@ export class TrendsJob {
     console.log(`[${new Date().toISOString()}] Starting trends update...`);
 
     try {
-      const regionCode = 'KR';
+      const regionCode = "KR";
 
       // Fetch all trending videos
       const allVideos = await youtubeService.fetchTrendingVideos(regionCode);
 
       // Separate shorts and long-form videos
-      const shorts = youtubeService.filterByType(allVideos, 'shorts');
-      const longForm = youtubeService.filterByType(allVideos, 'long');
+      const shorts = youtubeService.filterByType(allVideos, "shorts");
+      const longForm = youtubeService.filterByType(allVideos, "long");
 
       // Get top 10 of each type
       const topShorts = youtubeService.getTopVideos(shorts, 10);
@@ -37,16 +37,20 @@ export class TrendsJob {
       // Delete old trending data (keep only latest)
       await prisma.video.deleteMany({
         where: {
-          regionCode,
+          region_code: regionCode,
         },
       });
 
       // Save new trending data
       await this.saveVideos(videosToSave);
 
-      console.log(`[${new Date().toISOString()}] Trends update completed: ${videosToSave.length} videos saved`);
+      console.log(
+        `[${new Date().toISOString()}] Trends update completed: ${
+          videosToSave.length
+        } videos saved`
+      );
     } catch (error) {
-      console.error('Error updating trends data:', error);
+      console.error("Error updating trends data:", error);
     } finally {
       this.isRunning = false;
     }
@@ -58,32 +62,36 @@ export class TrendsJob {
   private async saveVideos(videos: VideoData[]): Promise<void> {
     for (const video of videos) {
       await prisma.video.upsert({
-        where: { videoId: video.videoId },
+        where: { video_id: video.videoId },
         update: {
           title: video.title,
-          channelTitle: video.channelTitle,
-          thumbnailUrl: video.thumbnailUrl,
-          viewCount: video.viewCount,
-          publishedAt: video.publishedAt,
+          channel_title: video.channelTitle,
+          thumbnail_url: video.thumbnailUrl,
+          view_count: video.viewCount,
+          like_count: BigInt(0), // TODO: YouTube API에서 가져오도록 수정
+          comment_count: BigInt(0), // TODO: YouTube API에서 가져오도록 수정
+          published_at: video.publishedAt,
           duration: video.duration,
-          aspectRatio: video.aspectRatio,
+          aspect_ratio: video.aspectRatio,
           type: video.type,
-          categoryId: video.categoryId,
-          regionCode: video.regionCode,
+          category_id: video.categoryId,
+          region_code: video.regionCode,
           rank: video.rank,
         },
         create: {
-          videoId: video.videoId,
+          video_id: video.videoId,
           title: video.title,
-          channelTitle: video.channelTitle,
-          thumbnailUrl: video.thumbnailUrl,
-          viewCount: video.viewCount,
-          publishedAt: video.publishedAt,
+          channel_title: video.channelTitle,
+          thumbnail_url: video.thumbnailUrl,
+          view_count: video.viewCount,
+          like_count: BigInt(0), // TODO: YouTube API에서 가져오도록 수정
+          comment_count: BigInt(0), // TODO: YouTube API에서 가져오도록 수정
+          published_at: video.publishedAt,
           duration: video.duration,
-          aspectRatio: video.aspectRatio,
+          aspect_ratio: video.aspectRatio,
           type: video.type,
-          categoryId: video.categoryId,
-          regionCode: video.regionCode,
+          category_id: video.categoryId,
+          region_code: video.regionCode,
           rank: video.rank,
         },
       });
@@ -94,7 +102,7 @@ export class TrendsJob {
    * Start cron job (every 30 minutes)
    */
   start(): void {
-    const interval = process.env.TRENDS_UPDATE_INTERVAL || '30';
+    const interval = process.env.TRENDS_UPDATE_INTERVAL || "30";
 
     // Run immediately on start
     this.updateTrendsData();

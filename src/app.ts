@@ -2,6 +2,7 @@ import express, { Application, Request, Response } from "express";
 import cors from "cors";
 import trendsRoutes from "./routes/trends.routes";
 import testRoutes from "./routes/test.routes";
+import categoryRoutes from "./routes/category.routes";
 
 const app: Application = express();
 
@@ -21,6 +22,7 @@ app.get("/health", (req: Request, res: Response) => {
 // API Routes
 app.use("/api/trends", trendsRoutes);
 app.use("/api/test", testRoutes);
+app.use("/api/category", categoryRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

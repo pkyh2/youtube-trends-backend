@@ -10,36 +10,39 @@ datasource db {
 }
 
 model Video {
-  id            String   @id @default(cuid())
-  videoId       String   @unique
+  video_id      String   @id  // YouTube video ID를 PK로
   title         String
-  channelTitle  String
-  thumbnailUrl  String
-  viewCount     BigInt
-  publishedAt   DateTime
+  channel_title String
+  thumbnail_url String
+  view_count    BigInt
+  like_count    BigInt
+  comment_count BigInt
+  published_at  DateTime
   duration      Int      // Duration in seconds
-  aspectRatio   String   // "9:16" for shorts, "16:9" for long-form
+  aspect_ratio  String   // "9:16" for shorts, "16:9" for long-form
   type          String   // "shorts" or "long"
-  categoryId    String
-  regionCode    String   @default("KR")
+  category_id   String
+  category      Category @relation(fields: [category_id], references: [category_id], onDelete: Cascade)
+  region_code   String   @default("KR")
   rank          Int      // Rank in trending (1-10)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  is_ad         Boolean  @default(false)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
 
-  @@index([type, categoryId, regionCode, rank])
-  @@index([videoId])
-  @@index([updatedAt])
+  @@index([type, category_id, region_code, rank])
+  @@index([region_code, type, rank])
+  @@index([category_id])
+  @@index([updated_at])
   @@map("videos")
 }
 
 model Category {
-  id            String   @id @default(cuid())
-  categoryId    String   @unique
-  name_en       String
-  name_ko       String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  category_id String   @id  // YouTube category ID를 PK로
+  name_en     String
+  name_ko     String
+  videos      Video[]  // Reverse relation
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
 
-  @@index([categoryId])
   @@map("categories")
 }
