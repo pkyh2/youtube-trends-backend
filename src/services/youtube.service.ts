@@ -133,7 +133,10 @@ export class YouTubeService {
    * Returns true if status is 200 (Short), false if 303 (regular video)
    */
   private async checkIfShort(
-    player: YouTubeVideo["player"],
+    player: {
+      embedWidth: string | null | undefined;
+      embedHeight: string | null | undefined;
+    },
     duration: number
   ): Promise<boolean> {
     try {
@@ -142,7 +145,11 @@ export class YouTubeService {
        * 1. duration < 180 seconds
        * 2. player.embedWidth : player.embedHeight = 9:16
        */
-      if (duration > 180 || player.embedWidth / player.embedHeight !== 9 / 16) {
+      if (
+        duration > 180 ||
+        Number(player.embedWidth ?? 0) / Number(player.embedHeight ?? 0) !==
+          9 / 16
+      ) {
         return false;
       }
       return true;
@@ -203,10 +210,7 @@ export class YouTubeService {
         );
 
         // Check if video is a Short using HTTP status code method
-        const isShort = await this.checkIfShort(
-          typedItem.player as YouTubeVideo["player"],
-          duration
-        );
+        const isShort = await this.checkIfShort(typedItem.player, duration);
         const type: VideoType = isShort ? "shorts" : "long";
         const aspect_ratio = isShort ? "9:16" : "16:9";
 

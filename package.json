@@ -9,7 +9,7 @@
     "prod": "node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "npx prisma migrate dev --name $npm_config_name",
-    "prisma:deploy": "prisma migrate deploy",
+    "prisma:deploy": "npx prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "prisma:seed": "tsx prisma/seed.ts"
   },

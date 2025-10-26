@@ -51,8 +51,8 @@ export interface YouTubeVideo {
   };
   player: {
     embedHtml: string;
-    embedHeight: number;
-    embedWidth: number;
+    embedHeight: string | null | undefined;
+    embedWidth: string | null | undefined;
   };
 }
 
