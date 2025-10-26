@@ -5,8 +5,11 @@ import {
 } from "../config/youtube.config";
 import { VideoData, YouTubeVideo, VideoType } from "../types/youtube.types";
 import { parseISO8601Duration } from "../utils/duration.util";
+import { createLogger } from "../utils/logger.util";
 
 export class YouTubeService {
+  private logger = createLogger("youtube-service");
+
   async getLanguages(): Promise<any> {
     const response = await youtube.i18nRegions.list({
       part: ["snippet"],
@@ -49,7 +52,7 @@ export class YouTubeService {
       chart: "mostPopular",
       regionCode: regionCode,
       maxResults: YOUTUBE_CONFIG.MAX_RESULTS,
-      videoCategoryId: "20",
+      videoCategoryId: "27",
       maxWidth: 1280,
       maxHeight: 720,
     });
@@ -60,7 +63,7 @@ export class YouTubeService {
         statistics: item.statistics,
       };
     });
-    // console.log(contentTitles);
+    console.log(contentTitles?.length ?? 0);
     return response.data;
   }
 
@@ -129,27 +132,23 @@ export class YouTubeService {
    * Check if a video is a YouTube Short by testing the /shorts/ URL
    * Returns true if status is 200 (Short), false if 303 (regular video)
    */
-  private async checkIfShort(videoId: string): Promise<boolean> {
+  private async checkIfShort(
+    player: YouTubeVideo["player"],
+    duration: number
+  ): Promise<boolean> {
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-
-      const response = await fetch(
-        `https://www.youtube.com/shorts/${videoId}`,
-        {
-          method: "HEAD",
-          redirect: "manual", // Don't follow redirects
-          signal: controller.signal,
-        }
-      );
-
-      clearTimeout(timeout);
-
-      // 200 = Short, 303 = Regular video (redirects to /watch)
-      return response.status === 200;
+      /**
+       * 아래 조건을 만족 하면 숏츠영상으로 판단
+       * 1. duration < 180 seconds
+       * 2. player.embedWidth : player.embedHeight = 9:16
+       */
+      if (duration > 180 || player.embedWidth / player.embedHeight !== 9 / 16) {
+        return false;
+      }
+      return true;
     } catch (error) {
-      console.warn(`Failed to check if ${videoId} is short:`, error);
-      return false; // Default to regular video on error
+      this.logger.warn(`Failed to check if video is short:`, error);
+      return false;
     }
   }
 
@@ -158,16 +157,26 @@ export class YouTubeService {
    */
   async fetchTrendingVideos(
     regionCode: string = YOUTUBE_CONFIG.DEFAULT_REGION,
+    maxWidth: number = YOUTUBE_CONFIG.MAX_WIDTH,
+    maxHeight: number = YOUTUBE_CONFIG.MAX_HEIGHT,
     categoryId?: string
   ): Promise<VideoData[]> {
     try {
       // Step 1: Get most popular videos
       const response = await youtube.videos.list({
-        part: ["snippet", "statistics", "contentDetails"],
+        part: [
+          "snippet",
+          "statistics",
+          "contentDetails",
+          "player",
+          "paidProductPlacementDetails",
+        ],
         chart: "mostPopular",
         regionCode,
         maxResults: YOUTUBE_CONFIG.MAX_RESULTS,
         videoCategoryId: categoryId,
+        maxWidth,
+        maxHeight,
       });
 
       if (!response.data.items) {
@@ -182,7 +191,9 @@ export class YouTubeService {
           !typedItem.id ||
           !typedItem.snippet ||
           !typedItem.statistics ||
-          !typedItem.contentDetails
+          !typedItem.contentDetails ||
+          !typedItem.player ||
+          !typedItem.paidProductPlacementDetails
         ) {
           return null;
         }
@@ -192,22 +203,29 @@ export class YouTubeService {
         );
 
         // Check if video is a Short using HTTP status code method
-        const isShort = await this.checkIfShort(typedItem.id);
+        const isShort = await this.checkIfShort(
+          typedItem.player as YouTubeVideo["player"],
+          duration
+        );
         const type: VideoType = isShort ? "shorts" : "long";
-        const aspectRatio = isShort ? "9:16" : "16:9";
+        const aspect_ratio = isShort ? "9:16" : "16:9";
 
         const videoData: VideoData = {
-          videoId: typedItem.id,
+          video_id: typedItem.id,
           title: typedItem.snippet.title,
-          channelTitle: typedItem.snippet.channelTitle,
-          thumbnailUrl: typedItem.snippet.thumbnails.high.url,
-          viewCount: BigInt(typedItem.statistics.viewCount || "0"),
-          publishedAt: new Date(typedItem.snippet.publishedAt),
+          channel_id: typedItem.snippet.channelId,
+          channel_title: typedItem.snippet.channelTitle,
+          thumbnail_url: typedItem.snippet.thumbnails.high.url,
+          view_count: BigInt(typedItem.statistics.viewCount || "0"),
+          like_count: BigInt(typedItem.statistics.likeCount || "0"),
+          comment_count: BigInt(typedItem.statistics.commentCount || "0"),
+          published_at: new Date(typedItem.snippet.publishedAt),
           duration,
-          aspectRatio,
-          type,
-          categoryId: typedItem.snippet.categoryId,
-          regionCode,
+          aspect_ratio: aspect_ratio,
+          type: type,
+          category_id: typedItem.snippet.categoryId,
+          region_code: regionCode,
+          is_ad: typedItem.paidProductPlacementDetails.hasPaidProductPlacement,
           rank: i + 1, // Rank based on position in trending list
         };
 
@@ -224,8 +242,8 @@ export class YouTubeService {
 
       return videos;
     } catch (error) {
-      console.error("Error fetching trending videos:", error);
-      throw new Error("Failed to fetch trending videos from YouTube API");
+      this.logger.error("Error fetching trending videos:", error);
+      throw error;
     }
   }
 
@@ -236,7 +254,12 @@ export class YouTubeService {
     categoryId: string,
     regionCode: string = YOUTUBE_CONFIG.DEFAULT_REGION
   ): Promise<VideoData[]> {
-    return this.fetchTrendingVideos(regionCode, categoryId);
+    return this.fetchTrendingVideos(
+      regionCode,
+      YOUTUBE_CONFIG.MAX_WIDTH,
+      YOUTUBE_CONFIG.MAX_HEIGHT,
+      categoryId
+    );
   }
 
   /**

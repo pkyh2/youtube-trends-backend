@@ -12,6 +12,7 @@ datasource db {
 model Video {
   video_id      String   @id  // YouTube video ID를 PK로
   title         String
+  channel_id    String
   channel_title String
   thumbnail_url String
   view_count    BigInt
@@ -26,6 +27,12 @@ model Video {
   region_code   String   @default("KR")
   rank          Int      // Rank in trending (1-10)
   is_ad         Boolean  @default(false)
+
+  // Trending tracking fields
+  trending_days Int      @default(1)       // 트렌딩에 등장한 횟수 (일 단위)
+  first_seen_at DateTime @default(now())   // 트렌딩에 처음 등장한 날짜
+  last_seen_at  DateTime @default(now())   // 트렌딩에 마지막으로 등장한 날짜
+
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
@@ -33,6 +40,8 @@ model Video {
   @@index([region_code, type, rank])
   @@index([category_id])
   @@index([updated_at])
+  @@index([last_seen_at])  // For cleanup queries
+  @@index([trending_days, category_id])  // For trend analysis
   @@map("videos")
 }
 

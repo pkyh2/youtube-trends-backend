@@ -23,6 +23,6 @@ export const YOUTUBE_CONFIG = {
   API_KEY: YOUTUBE_API_KEY,
   MAX_RESULTS: 50, // YouTube API allows max 50 per request
   DEFAULT_REGION: "KR",
-  SHORTS_MAX_DURATION: 180, // 180 seconds (3 minutes)
-  SHORTS_ASPECT_RATIO: "9:16",
+  MAX_WIDTH: 1280,
+  MAX_HEIGHT: 720,
 };

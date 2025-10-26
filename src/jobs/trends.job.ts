@@ -2,117 +2,191 @@ import cron from "node-cron";
 import { youtubeService } from "../services/youtube.service";
 import prisma from "../config/database";
 import { VideoData } from "../types/youtube.types";
+import { YOUTUBE_CONFIG } from "../config/youtube.config";
+import { createLogger } from "../utils/logger.util";
 
 export class TrendsJob {
   private isRunning = false;
+  private logger = createLogger("trends-job");
 
   /**
    * Update trends data in database
+   * Collects trending videos for ALL categories with deduplication
    */
   async updateTrendsData(): Promise<void> {
     if (this.isRunning) {
-      console.log("Trends update already in progress, skipping...");
+      this.logger.warn("Trends update already in progress, skipping...");
       return;
     }
 
     this.isRunning = true;
-    console.log(`[${new Date().toISOString()}] Starting trends update...`);
+    this.logger.info("Starting category-based trends update...");
 
     try {
       const regionCode = "KR";
+      let totalVideosProcessed = 0;
+      let categoriesProcessed = 0;
 
-      // Fetch all trending videos
-      const allVideos = await youtubeService.fetchTrendingVideos(regionCode);
-
-      // Separate shorts and long-form videos
-      const shorts = youtubeService.filterByType(allVideos, "shorts");
-      const longForm = youtubeService.filterByType(allVideos, "long");
-
-      // Get top 10 of each type
-      const topShorts = youtubeService.getTopVideos(shorts, 10);
-      const topLongForm = youtubeService.getTopVideos(longForm, 10);
-
-      const videosToSave = [...topShorts, ...topLongForm];
-
-      // Delete old trending data (keep only latest)
-      await prisma.video.deleteMany({
-        where: {
-          region_code: regionCode,
-        },
+      // Fetch all categories from database
+      const categories = await prisma.category.findMany({
+        orderBy: { category_id: 'asc' }
       });
 
-      // Save new trending data
-      await this.saveVideos(videosToSave);
+      this.logger.info(`📊 Processing ${categories.length} categories...`);
 
-      console.log(
-        `[${new Date().toISOString()}] Trends update completed: ${
-          videosToSave.length
-        } videos saved`
-      );
+      // Iterate through each category
+      for (const category of categories) {
+        try {
+          this.logger.info(`🔍 Category: ${category.name_ko} (${category.category_id})`);
+
+          // Fetch trending videos for this category
+          const videos = await youtubeService.fetchTrendingVideos(
+            regionCode,
+            YOUTUBE_CONFIG.MAX_WIDTH,
+            YOUTUBE_CONFIG.MAX_HEIGHT,
+            category.category_id
+          );
+
+          if (videos.length === 0) {
+            this.logger.warn(`No videos found for ${category.name_ko}`);
+            continue;
+          }
+
+          // Save videos with upsert (increment counter if duplicate)
+          await this.saveVideosWithCounter(videos);
+
+          totalVideosProcessed += videos.length;
+          categoriesProcessed++;
+          this.logger.success(`Processed ${videos.length} videos for ${category.name_ko}`);
+
+        } catch (error: any) {
+          // Handle 404 errors (category has no trending videos)
+          if (error.response?.status === 404 || error.status === 404) {
+            this.logger.info(`Category ${category.name_ko} has no trending videos, skipping...`);
+            continue;
+          }
+
+          // Log other errors but continue processing
+          this.logger.error(`Error processing category ${category.name_ko}:`, error);
+          continue;
+        }
+      }
+
+      this.logger.success(`Trends update completed: ${categoriesProcessed}/${categories.length} categories, ${totalVideosProcessed} videos processed`);
+
     } catch (error) {
-      console.error("Error updating trends data:", error);
+      this.logger.error("Error updating trends data:", error);
     } finally {
       this.isRunning = false;
     }
   }
 
   /**
-   * Save videos to database
+   * Save videos to database with trending counter
+   * Increments trending_days for existing videos, creates new ones with counter = 1
    */
-  private async saveVideos(videos: VideoData[]): Promise<void> {
+  private async saveVideosWithCounter(videos: VideoData[]): Promise<void> {
+    const now = new Date();
+
     for (const video of videos) {
       await prisma.video.upsert({
-        where: { video_id: video.videoId },
+        where: { video_id: video.video_id },
+
+        // UPDATE: Existing video - increment counter and update stats
         update: {
-          title: video.title,
-          channel_title: video.channelTitle,
-          thumbnail_url: video.thumbnailUrl,
-          view_count: video.viewCount,
-          like_count: BigInt(0), // TODO: YouTube API에서 가져오도록 수정
-          comment_count: BigInt(0), // TODO: YouTube API에서 가져오도록 수정
-          published_at: video.publishedAt,
-          duration: video.duration,
-          aspect_ratio: video.aspectRatio,
+          trending_days: { increment: 1 },  // 트렌딩 카운터 증가
+          last_seen_at: now,                // 마지막 등장 시간 갱신
+          title: video.title,               // 제목 업데이트 (변경 가능)
+          channel_title: video.channel_title,
+          thumbnail_url: video.thumbnail_url,
+          view_count: video.view_count,     // 최신 조회수
+          like_count: video.like_count,
+          comment_count: video.comment_count,
+          rank: video.rank,                 // 최신 순위
+          aspect_ratio: video.aspect_ratio,
           type: video.type,
-          category_id: video.categoryId,
-          region_code: video.regionCode,
-          rank: video.rank,
+          // first_seen_at은 그대로 유지 (생성 시에만 설정)
         },
+
+        // CREATE: New video - initialize with counter = 1
         create: {
-          video_id: video.videoId,
+          video_id: video.video_id,
           title: video.title,
-          channel_title: video.channelTitle,
-          thumbnail_url: video.thumbnailUrl,
-          view_count: video.viewCount,
-          like_count: BigInt(0), // TODO: YouTube API에서 가져오도록 수정
-          comment_count: BigInt(0), // TODO: YouTube API에서 가져오도록 수정
-          published_at: video.publishedAt,
+          channel_id: video.channel_id,
+          channel_title: video.channel_title,
+          thumbnail_url: video.thumbnail_url,
+          view_count: video.view_count,
+          like_count: video.like_count,
+          comment_count: video.comment_count,
+          published_at: video.published_at,
           duration: video.duration,
-          aspect_ratio: video.aspectRatio,
+          aspect_ratio: video.aspect_ratio,
           type: video.type,
-          category_id: video.categoryId,
-          region_code: video.regionCode,
+          category_id: video.category_id,
+          region_code: video.region_code,
           rank: video.rank,
+          is_ad: video.is_ad,
+          trending_days: 1,        // 첫 등장: 카운터 1
+          first_seen_at: now,      // 처음 트렌딩에 등장한 시간
+          last_seen_at: now,       // 마지막 등장 시간
         },
       });
     }
   }
 
   /**
-   * Start cron job (every 30 minutes)
+   * Cleanup old trending data based on retention period
+   * Deletes videos that haven't appeared in trending for N days
+   */
+  async cleanupOldTrending(): Promise<void> {
+    const retentionDays = parseInt(process.env.RETENTION_DAYS || '30');
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+
+    this.logger.info(`🗑️  Starting cleanup: removing videos not trending for ${retentionDays} days (cutoff: ${cutoffDate.toISOString()})`);
+
+    try {
+      const result = await prisma.video.deleteMany({
+        where: {
+          last_seen_at: {
+            lt: cutoffDate  // 마지막 등장이 N일 이전
+          }
+        }
+      });
+
+      this.logger.success(`Cleaned up ${result.count} old videos`);
+    } catch (error) {
+      this.logger.error("Error during cleanup:", error);
+    }
+  }
+
+  /**
+   * Start cron jobs
+   * - Trends update: Every N minutes (default: 30)
+   * - Cleanup: Daily at 3 AM
    */
   start(): void {
     const interval = process.env.TRENDS_UPDATE_INTERVAL || "30";
+    const retentionDays = process.env.RETENTION_DAYS || "30";
 
-    // Run immediately on start
+    this.logger.info(`Initializing trends job system...`);
+    this.logger.info(`Log file: ${this.logger.getLogFilePath()}`);
+
+    // Run collection immediately on start
     this.updateTrendsData();
 
-    // Schedule periodic updates (every 30 minutes: */30 * * * *)
+    // Schedule periodic collection (every 30 minutes: */30 * * * *)
     cron.schedule(`*/${interval} * * * *`, () => {
       this.updateTrendsData();
     });
 
-    console.log(`Trends update job scheduled: every ${interval} minutes`);
+    // Schedule daily cleanup at 3 AM (0 3 * * *)
+    cron.schedule('0 3 * * *', () => {
+      this.cleanupOldTrending();
+    });
+
+    this.logger.success(`Trends update job scheduled: every ${interval} minutes`);
+    this.logger.success(`Cleanup job scheduled: daily at 3 AM (${retentionDays}-day retention)`);
   }
 }
 
