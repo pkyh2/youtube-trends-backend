@@ -67,6 +67,20 @@ model Channel {
   published_at DateTime
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+  transcripts Transcript[]
 
   @@map("channels")
+}
+
+model Transcript {
+  id String   @id @default(cuid())  // Prisma ID
+  channel_id String
+  video_id String   @unique
+  transcript String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  channel Channel @relation(fields: [channel_id], references: [channel_id], onDelete: Cascade)
+
+  @@map("transcripts")
+  @@index([channel_id, video_id])
 }
