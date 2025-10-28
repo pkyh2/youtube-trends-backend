@@ -18,6 +18,39 @@ export class YouTubeService {
     return response.data.items;
   }
 
+  async getCaptions(): Promise<any> {
+    const response = await youtube.captions.list({
+      part: ["snippet"],
+      videoId: "RFyCaNVl3v8",
+    });
+    return response.data.items;
+  }
+
+  async getChannelInfo(channelId: string): Promise<any> {
+    const response = await youtube.channels.list({
+      part: ["snippet,contentDetails,statistics"],
+      id: [channelId],
+    });
+    return response.data.items;
+  }
+
+  async getChannelSection(): Promise<any> {
+    const response = await youtube.channelSections.list({
+      part: ["snippet,contentDetails"],
+      channelId: "UCcKzn5pF5GkhX9ZusYEq_6Q",
+    });
+    return response.data.items;
+  }
+
+  async getPlaylists(): Promise<any> {
+    const response = await youtube.playlists.list({
+      part: ["snippet,contentDetails"],
+      channelId: "UCcKzn5pF5GkhX9ZusYEq_6Q",
+      maxResults: 25,
+    });
+    return response.data.items;
+  }
+
   async getMostPopularVideos(
     regionCode: string = YOUTUBE_CONFIG.DEFAULT_REGION
   ): Promise<any> {
@@ -127,6 +160,8 @@ export class YouTubeService {
     const categories = Array.from(categoryMap.values());
     return categories;
   }
+
+  // -------------------위 테스트 함수 끝-------------------
 
   /**
    * Check if a video is a YouTube Short by testing the /shorts/ URL

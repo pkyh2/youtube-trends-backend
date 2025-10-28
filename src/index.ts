@@ -17,7 +17,7 @@ const server = app.listen(PORT, () => {
 });
 
 // Start trends update job
-trendsJob.start();
+// trendsJob.start();
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {

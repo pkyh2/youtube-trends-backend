@@ -55,3 +55,18 @@ model Category {
 
   @@map("categories")
 }
+
+model Channel {
+  channel_id String   @id  // YouTube channel ID를 PK로
+  title      String
+  description String
+  thumbnail_url String
+  view_count BigInt
+  subscriber_count BigInt
+  video_count BigInt
+  published_at DateTime
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("channels")
+}

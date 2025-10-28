@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { youtubeService } from "../services/youtube.service";
 import { YOUTUBE_CONFIG } from "../config/youtube.config";
+import { supadataService } from "../services/supadata.service";
 
 export class TestController {
   /**
@@ -8,9 +9,15 @@ export class TestController {
    */
   async getTest1(req: Request, res: Response): Promise<void> {
     try {
-      const result = await youtubeService.getMostPopularVideo(
-        YOUTUBE_CONFIG.DEFAULT_REGION
-      );
+      // const result = await youtubeService.getMostPopularVideo(
+      //   YOUTUBE_CONFIG.DEFAULT_REGION
+      // );
+
+      // const result = await youtubeService.getCaptions();
+      // const result = await supadataService.getTranscript();
+      // const result = await youtubeService.getChannelSection();
+      const result = await youtubeService.getChannelInfo();
+      // const result = await youtubeService.getPlaylists();
 
       res.json({
         success: true,
