@@ -1,6 +1,7 @@
 import { passiveRepository } from "../repositories/passive.repository";
 import { createLogger } from "../utils/logger.util";
 import { youtubeService } from "./youtube.service";
+import { supadataService } from "./supadata.service";
 
 export class PassiveService {
   private logger = createLogger("passive-service");
@@ -16,6 +17,15 @@ export class PassiveService {
       subscriber_count: channelInfo[0].statistics.subscriberCount,
       video_count: channelInfo[0].statistics.videoCount,
       published_at: channelInfo[0].snippet.publishedAt,
+    });
+  }
+
+  async addVideoTranscript(channelId: string, videoId: string): Promise<void> {
+    const transcriptResult = await supadataService.getTranscript(videoId);
+    await passiveRepository.createVideoTranscript({
+      channel_id: channelId,
+      video_id: videoId,
+      transcript: transcriptResult.content,
     });
   }
 }

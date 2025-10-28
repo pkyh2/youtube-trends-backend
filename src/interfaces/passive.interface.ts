@@ -1,14 +1,6 @@
-export interface Channel {
-  channel_id: string;
-  title: string;
-  description: string;
-  thumbnail_url: string;
-  view_count: number;
-  subscriber_count: number;
-  video_count: number;
-  published_at: Date;
-}
+import { Channel, Transcript } from "../types/passive.types";
 
 export interface IPassiveRepository {
   createChannelInfo(data: Channel): Promise<void>;
+  createVideoTranscript(data: Transcript): Promise<void>;
 }

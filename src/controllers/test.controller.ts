@@ -15,8 +15,8 @@ export class TestController {
 
       // const result = await youtubeService.getCaptions();
       // const result = await supadataService.getTranscript();
-      // const result = await youtubeService.getChannelSection();
-      const result = await youtubeService.getChannelInfo();
+      const result = await youtubeService.getChannelSection();
+      // const result = await youtubeService.getChannelInfo();
       // const result = await youtubeService.getPlaylists();
 
       res.json({

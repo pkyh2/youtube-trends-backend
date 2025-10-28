@@ -7,4 +7,8 @@ const router = Router();
 router.post("/channel", (req, res) =>
   passiveController.addChannelInfo(req, res)
 );
+
+router.post("/video/transcript", (req, res) =>
+  passiveController.addVideoTranscript(req, res)
+);
 export default router;

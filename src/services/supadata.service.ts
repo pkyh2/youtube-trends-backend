@@ -1,14 +1,14 @@
-import supadata from "../config/supadata";
+import supadata, { TranscriptResponse } from "../config/supadata";
 
 export class SupadataService {
-  async getTranscript(): Promise<any> {
+  async getTranscript(videoId: string): Promise<TranscriptResponse> {
     const transcriptResult = await supadata.transcript({
-      url: "https://www.youtube.com/watch?v=pOFCKN0DSYo",
+      url: `https://www.youtube.com/watch?v=${videoId}`,
       lang: "en", // optional
       text: true, // optional: return plain text instead of timestamped chunks
       mode: "auto", // optional: 'native', 'auto', or 'generate'
     });
-    return transcriptResult;
+    return transcriptResult as TranscriptResponse;
   }
 }
 

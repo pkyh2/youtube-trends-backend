@@ -76,7 +76,7 @@ model Transcript {
   id String   @id @default(cuid())  // Prisma ID
   channel_id String
   video_id String   @unique
-  transcript String
+  transcript String?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   channel Channel @relation(fields: [channel_id], references: [channel_id], onDelete: Cascade)
