@@ -76,7 +76,7 @@ export class CategoryRepository implements ICategoryRepository {
     const hasNextPage = page < totalPages;
 
     return {
-      data: videos as CategoryVideo[],
+      data: videos as any,
       pagination: {
         currentPage: page,
         totalPages,
