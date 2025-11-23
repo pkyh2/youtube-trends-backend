@@ -11,7 +11,15 @@
     "prisma:migrate": "npx prisma migrate dev --name $npm_config_name",
     "prisma:deploy": "npx prisma migrate deploy",
     "prisma:studio": "prisma studio",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "docker:up": "./scripts/docker.sh up",
+    "docker:down": "./scripts/docker.sh down",
+    "docker:stop": "./scripts/docker.sh stop",
+    "docker:logs": "./scripts/docker.sh logs",
+    "docker:restart": "./scripts/docker.sh restart",
+    "docker:ps": "./scripts/docker.sh ps",
+    "docker:seed": "./scripts/docker.sh seed",
+    "docker:exec": "./scripts/docker.sh exec"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
