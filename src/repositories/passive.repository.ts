@@ -13,6 +13,9 @@ export class PassiveRepository implements IPassiveRepository {
       data,
     });
   }
+  async getAllVideoTranscript(): Promise<Transcript[]> {
+    return await prisma.transcript.findMany();
+  }
 }
 
 export const passiveRepository = new PassiveRepository();

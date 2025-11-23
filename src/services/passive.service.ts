@@ -28,6 +28,10 @@ export class PassiveService {
       transcript: transcriptResult.content,
     });
   }
-}
 
-export const passiveService = new PassiveService();
+  async getAllVideoTranscript(): Promise<string[]> {
+    const transcriptData = await passiveRepository.getAllVideoTranscript();
+    const transcripts = transcriptData.map((item) => item.transcript);
+    return transcripts as string[];
+  }
+}
