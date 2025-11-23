@@ -1,5 +1,3 @@
-// Prisma Schema for YouTube Trends API
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,77 +8,122 @@ datasource db {
 }
 
 model Video {
-  video_id      String   @id  // YouTube video ID를 PK로
   title         String
-  channel_id    String
-  channel_title String
-  thumbnail_url String
-  view_count    BigInt
-  like_count    BigInt
-  comment_count BigInt
-  published_at  DateTime
-  duration      Int      // Duration in seconds
-  aspect_ratio  String   // "9:16" for shorts, "16:9" for long-form
-  type          String   // "shorts" or "long"
+  duration      Int
+  type          String
+  rank          Int
+  aspect_ratio  String
   category_id   String
-  category      Category @relation(fields: [category_id], references: [category_id], onDelete: Cascade)
-  region_code   String   @default("KR")
-  rank          Int      // Rank in trending (1-10)
-  is_ad         Boolean  @default(false)
-
-  // Trending tracking fields
-  trending_days Int      @default(1)       // 트렌딩에 등장한 횟수 (일 단위)
-  first_seen_at DateTime @default(now())   // 트렌딩에 처음 등장한 날짜
-  last_seen_at  DateTime @default(now())   // 트렌딩에 마지막으로 등장한 날짜
-
+  channel_title String
+  comment_count BigInt
   created_at    DateTime @default(now())
+  is_ad         Boolean  @default(false)
+  like_count    BigInt
+  published_at  DateTime
+  region_code   String   @default("KR")
+  thumbnail_url String
   updated_at    DateTime @updatedAt
+  video_id      String   @id
+  view_count    BigInt
+  channel_id    String
+  first_seen_at DateTime @default(now())
+  last_seen_at  DateTime @default(now())
+  trending_days Int      @default(1)
+  category      Category @relation(fields: [category_id], references: [category_id], onDelete: Cascade)
 
   @@index([type, category_id, region_code, rank])
   @@index([region_code, type, rank])
   @@index([category_id])
   @@index([updated_at])
-  @@index([last_seen_at])  // For cleanup queries
-  @@index([trending_days, category_id])  // For trend analysis
+  @@index([last_seen_at])
+  @@index([trending_days, category_id])
   @@map("videos")
 }
 
 model Category {
-  category_id String   @id  // YouTube category ID를 PK로
   name_en     String
   name_ko     String
-  videos      Video[]  // Reverse relation
+  category_id String   @id
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
+  videos      Video[]
 
   @@map("categories")
 }
 
 model Channel {
-  channel_id String   @id  // YouTube channel ID를 PK로
-  title      String
-  description String
-  thumbnail_url String
-  view_count BigInt
+  channel_id       String       @id
+  title            String
+  description      String
+  thumbnail_url    String
+  view_count       BigInt
   subscriber_count BigInt
-  video_count BigInt
-  published_at DateTime
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  transcripts Transcript[]
+  video_count      BigInt
+  published_at     DateTime
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
+  transcripts      Transcript[]
 
   @@map("channels")
 }
 
 model Transcript {
-  id String   @id @default(cuid())  // Prisma ID
+  id         String   @id @default(cuid())
   channel_id String
-  video_id String   @unique
+  video_id   String   @unique
   transcript String?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-  channel Channel @relation(fields: [channel_id], references: [channel_id], onDelete: Cascade)
+  channel    Channel  @relation(fields: [channel_id], references: [channel_id], onDelete: Cascade)
 
-  @@map("transcripts")
   @@index([channel_id, video_id])
+  @@map("transcripts")
+}
+
+model ShortsStoryTemplate {
+  id                 Int       @id @default(autoincrement())
+  category           String
+  tags               String?
+  hook               String
+  background         String
+  problem            String
+  escalation         String
+  twist              String
+  explanation        String
+  ending             String
+  title_template     String
+  hashtags           String?
+  target_length_sec  Int?      @default(60)
+  tts_voice_profile  String?   @default("neutral")
+  prompt_main        String
+  prompt_background  String?
+  prompt_problem     String?
+  prompt_twist       String?
+  prompt_explanation String?
+  prompt_ending      String?
+  is_active          Boolean?  @default(true)
+  created_at         DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime? @default(now()) @db.Timestamptz(6)
+  status             String?   @default("ready")
+  is_processing      Boolean?  @default(false)
+
+  @@map("shorts_story_templates")
+}
+
+model ShortsStory {
+  id                Int       @id @default(autoincrement())
+  category          String
+  title             String
+  full_script       String
+  status            String?   @default("ready")
+  is_processing     Boolean?  @default(false)
+  target_length_sec Int?      @default(45)
+  tts_voice_profile String?   @default("neutral")
+  hashtags          String?
+  prompt_style      String?   @default("comic")
+  safety_level      String?   @default("normal")
+  created_at        DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@map("shorts_stories")
 }
