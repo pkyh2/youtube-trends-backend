@@ -111,19 +111,42 @@ model ShortsStoryTemplate {
 }
 
 model ShortsStory {
-  id                Int       @id @default(autoincrement())
-  category          String
-  title             String
-  full_script       String
-  status            String?   @default("ready")
-  is_processing     Boolean?  @default(false)
-  target_length_sec Int?      @default(45)
-  tts_voice_profile String?   @default("neutral")
-  hashtags          String?
-  prompt_style      String?   @default("comic")
-  safety_level      String?   @default("normal")
-  created_at        DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime? @default(now()) @db.Timestamptz(6)
+  id                  Int                   @id @default(autoincrement())
+  category            String
+  title               String
+  full_script         String
+  status              String?               @default("ready")
+  is_processing       Boolean?              @default(false)
+  target_length_sec   Int?                  @default(45)
+  tts_voice_profile   String?               @default("neutral")
+  hashtags            String?
+  prompt_style        String?               @default("comic")
+  safety_level        String?               @default("normal")
+  created_at          DateTime?             @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?             @default(now()) @db.Timestamptz(6)
+  shorts_story_scenes ShortsStoryScene[]
 
   @@map("shorts_stories")
+}
+
+model ShortsStoryScene {
+  id             Int         @id @default(autoincrement())
+  shorts_story_id Int
+  scene_order    Int
+  narration_text String
+  on_screen_text String?
+  scene_type     String?     @default("narration")
+  is_punchline   Boolean?    @default(false)
+  pause_ms       Int?        @default(0)
+  image_prompt   String?
+  duration_sec   Int?
+  tts_audio_url  String?
+  image_url      String?
+  status         String?     @default("ready")
+  created_at     DateTime?   @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?   @default(now()) @db.Timestamptz(6)
+  shorts_story   ShortsStory @relation(fields: [shorts_story_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([shorts_story_id, scene_order])
+  @@map("shorts_story_scene")
 }
