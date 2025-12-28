@@ -139,6 +139,7 @@ model ShortsStoryScene {
   is_punchline   Boolean?    @default(false)
   pause_ms       Int?        @default(0)
   image_prompt   String?
+  video_prompt   String?
   duration_sec   Int?
   tts_audio_url  String?
   image_url      String?
