@@ -80,34 +80,12 @@ model Transcript {
   @@map("transcripts")
 }
 
-model ShortsStoryTemplate {
-  id                 Int       @id @default(autoincrement())
-  category           String
-  tags               String?
-  hook               String
-  background         String
-  problem            String
-  escalation         String
-  twist              String
-  explanation        String
-  ending             String
-  title_template     String
-  hashtags           String?
-  target_length_sec  Int?      @default(60)
-  tts_voice_profile  String?   @default("neutral")
-  prompt_main        String
-  prompt_background  String?
-  prompt_problem     String?
-  prompt_twist       String?
-  prompt_explanation String?
-  prompt_ending      String?
-  is_active          Boolean?  @default(true)
-  created_at         DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime? @default(now()) @db.Timestamptz(6)
-  status             String?   @default("ready")
-  is_processing      Boolean?  @default(false)
-
-  @@map("shorts_story_templates")
+enum Status {
+  READY
+  PROCESSING
+  SCENES_DONE
+  RENDERED
+  PUBLISHED
 }
 
 model ShortsStory {
@@ -115,18 +93,32 @@ model ShortsStory {
   category            String
   title               String
   full_script         String
-  status              String?               @default("ready")
-  is_processing       Boolean?              @default(false)
   target_length_sec   Int?                  @default(45)
   tts_voice_profile   String?               @default("neutral")
   hashtags            String?
-  prompt_style        String?               @default("comic")
-  safety_level        String?               @default("normal")
+  visual_style        Json?                
+  status              Status                @default(READY)
+  is_processing       Boolean?              @default(false)
+  final_video_url     String?
+  youtube_video_id    String?
+
   created_at          DateTime?             @default(now()) @db.Timestamptz(6)
   updated_at          DateTime?             @default(now()) @db.Timestamptz(6)
   shorts_story_scenes ShortsStoryScene[]
 
+  @@index([status])
+  @@index([category, status])
+  @@index([is_processing])
+  @@index([created_at])
   @@map("shorts_stories")
+}
+
+enum SceneStatus {
+  READY
+  IMG_DONE
+  TTS_DONE
+  VIDEO_DONE
+  SCENE_DONE
 }
 
 model ShortsStoryScene {
@@ -135,20 +127,70 @@ model ShortsStoryScene {
   scene_order    Int
   narration_text String
   on_screen_text String?
-  scene_type     String?     @default("narration")
-  is_punchline   Boolean?    @default(false)
-  pause_ms       Int?        @default(0)
+
   image_prompt   String?
   video_prompt   String?
   duration_sec   Int?
-  tts_audio_url  String?
+  
   image_url      String?
   video_url      String?
-  status         String?     @default("ready")
+  tts_audio_url  String?
+  merged_video_url String?
+  
+  status         SceneStatus @default(READY)
+  retry_count    Int?        @default(0)
+  error_message   String?
+  
   created_at     DateTime?   @default(now()) @db.Timestamptz(6)
   updated_at     DateTime?   @default(now()) @db.Timestamptz(6)
   shorts_story   ShortsStory @relation(fields: [shorts_story_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  segments       ShortsStorySceneSegment[]
 
   @@unique([shorts_story_id, scene_order])
-  @@map("shorts_story_scene")
+  @@index([shorts_story_id, scene_order])
+  @@index([status])
+  @@index([shorts_story_id, status])
+  @@map("shorts_story_scenes")
+}
+
+model ShortsStorySceneSegment {
+  id             Int         @id @default(autoincrement())
+  scene_id       Int
+  segment_order  Int
+  speaker_key    String
+
+  text           String
+  tts_audio_url  String?
+  duration_sec   Int?
+
+  status         SceneStatus @default(READY)
+  retry_count    Int?        @default(0)
+  error_message   String?
+
+  created_at     DateTime?   @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?   @default(now()) @db.Timestamptz(6)
+  scene          ShortsStoryScene @relation(fields: [scene_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  speaker        ShortsStoryVoice @relation(fields: [speaker_key], references: [speaker_key], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([scene_id])
+  @@index([segment_order])
+  @@index([status])
+  @@index([scene_id, status])
+  @@map("shorts_story_scene_segments")
+}
+
+model ShortsStoryVoice {
+  id             Int         @id @default(autoincrement())
+  speaker_key    String      @unique
+  tts_provider   String
+  voice_name     String
+
+  created_at     DateTime?   @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?   @default(now()) @db.Timestamptz(6)
+  segments       ShortsStorySceneSegment[]
+
+  @@index([speaker_key])
+  @@index([tts_provider])
+  @@index([voice_name])
+  @@map("shorts_story_voices")
 }
