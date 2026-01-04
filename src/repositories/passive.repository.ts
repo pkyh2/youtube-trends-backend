@@ -1,6 +1,6 @@
 import prisma from "../config/database";
 import { IPassiveRepository } from "../interfaces/passive.interface";
-import { Channel, Transcript } from "../types/passive.types";
+import { Channel, ShortsStoryVoice, Transcript } from "../types/passive.types";
 
 export class PassiveRepository implements IPassiveRepository {
   async createChannelInfo(data: Channel): Promise<void> {
@@ -15,6 +15,11 @@ export class PassiveRepository implements IPassiveRepository {
   }
   async getAllVideoTranscript(): Promise<Transcript[]> {
     return await prisma.transcript.findMany();
+  }
+  async createVideoVoice(data: ShortsStoryVoice): Promise<void> {
+    await prisma.shortsStoryVoice.create({
+      data,
+    });
   }
 }
 

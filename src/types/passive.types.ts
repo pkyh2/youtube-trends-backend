@@ -14,3 +14,9 @@ export interface Transcript {
   video_id: string;
   transcript: string | null;
 }
+
+export interface ShortsStoryVoice {
+  speaker_key: string;
+  voice_name: string;
+  tts_provider: string;
+}

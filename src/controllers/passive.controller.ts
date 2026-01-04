@@ -50,6 +50,22 @@ export class PassiveController {
       });
     }
   }
+
+  async addVideoVoice(req: Request, res: Response): Promise<void> {
+    try {
+      const { speakerKey, voiceName } = req.body;
+      await this.passiveService.addVideoVoice(speakerKey, voiceName);
+      res.json({
+        success: true,
+        data: "Video voice added successfully",
+      });
+    } catch (error) {
+      console.error("Error adding video voice:", error);
+      res.status(500).json({
+        error: "Failed to add video voice",
+      });
+    }
+  }
 }
 
 export const passiveController = new PassiveController();

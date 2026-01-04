@@ -29,7 +29,7 @@ export class TrendsJob {
 
       // Fetch all categories from database
       const categories = await prisma.category.findMany({
-        orderBy: { category_id: 'asc' }
+        orderBy: { category_id: "asc" },
       });
 
       this.logger.info(`📊 Processing ${categories.length} categories...`);
@@ -37,7 +37,9 @@ export class TrendsJob {
       // Iterate through each category
       for (const category of categories) {
         try {
-          this.logger.info(`🔍 Category: ${category.name_ko} (${category.category_id})`);
+          this.logger.info(
+            `🔍 Category: ${category.name_ko} (${category.category_id})`
+          );
 
           // Fetch trending videos for this category
           const videos = await youtubeService.fetchTrendingVideos(
@@ -57,23 +59,30 @@ export class TrendsJob {
 
           totalVideosProcessed += videos.length;
           categoriesProcessed++;
-          this.logger.success(`Processed ${videos.length} videos for ${category.name_ko}`);
-
+          this.logger.success(
+            `Processed ${videos.length} videos for ${category.name_ko}`
+          );
         } catch (error: any) {
           // Handle 404 errors (category has no trending videos)
           if (error.response?.status === 404 || error.status === 404) {
-            this.logger.info(`Category ${category.name_ko} has no trending videos, skipping...`);
+            this.logger.info(
+              `Category ${category.name_ko} has no trending videos, skipping...`
+            );
             continue;
           }
 
           // Log other errors but continue processing
-          this.logger.error(`Error processing category ${category.name_ko}:`, error);
+          this.logger.error(
+            `Error processing category ${category.name_ko}:`,
+            error
+          );
           continue;
         }
       }
 
-      this.logger.success(`Trends update completed: ${categoriesProcessed}/${categories.length} categories, ${totalVideosProcessed} videos processed`);
-
+      this.logger.success(
+        `Trends update completed: ${categoriesProcessed}/${categories.length} categories, ${totalVideosProcessed} videos processed`
+      );
     } catch (error) {
       this.logger.error("Error updating trends data:", error);
     } finally {
@@ -94,15 +103,15 @@ export class TrendsJob {
 
         // UPDATE: Existing video - increment counter and update stats
         update: {
-          trending_days: { increment: 1 },  // 트렌딩 카운터 증가
-          last_seen_at: now,                // 마지막 등장 시간 갱신
-          title: video.title,               // 제목 업데이트 (변경 가능)
+          trending_days: { increment: 1 }, // 트렌딩 카운터 증가
+          last_seen_at: now, // 마지막 등장 시간 갱신
+          title: video.title, // 제목 업데이트 (변경 가능)
           channel_title: video.channel_title,
           thumbnail_url: video.thumbnail_url,
-          view_count: video.view_count,     // 최신 조회수
+          view_count: video.view_count, // 최신 조회수
           like_count: video.like_count,
           comment_count: video.comment_count,
-          rank: video.rank,                 // 최신 순위
+          rank: video.rank, // 최신 순위
           aspect_ratio: video.aspect_ratio,
           type: video.type,
           // first_seen_at은 그대로 유지 (생성 시에만 설정)
@@ -126,9 +135,9 @@ export class TrendsJob {
           region_code: video.region_code,
           rank: video.rank,
           is_ad: video.is_ad,
-          trending_days: 1,        // 첫 등장: 카운터 1
-          first_seen_at: now,      // 처음 트렌딩에 등장한 시간
-          last_seen_at: now,       // 마지막 등장 시간
+          trending_days: 1, // 첫 등장: 카운터 1
+          first_seen_at: now, // 처음 트렌딩에 등장한 시간
+          last_seen_at: now, // 마지막 등장 시간
         },
       });
     }
@@ -139,19 +148,21 @@ export class TrendsJob {
    * Deletes videos that haven't appeared in trending for N days
    */
   async cleanupOldTrending(): Promise<void> {
-    const retentionDays = parseInt(process.env.RETENTION_DAYS || '30');
+    const retentionDays = parseInt(process.env.RETENTION_DAYS || "30");
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
 
-    this.logger.info(`🗑️  Starting cleanup: removing videos not trending for ${retentionDays} days (cutoff: ${cutoffDate.toISOString()})`);
+    this.logger.info(
+      `🗑️  Starting cleanup: removing videos not trending for ${retentionDays} days (cutoff: ${cutoffDate.toISOString()})`
+    );
 
     try {
       const result = await prisma.video.deleteMany({
         where: {
           last_seen_at: {
-            lt: cutoffDate  // 마지막 등장이 N일 이전
-          }
-        }
+            lt: cutoffDate, // 마지막 등장이 N일 이전
+          },
+        },
       });
 
       this.logger.success(`Cleaned up ${result.count} old videos`);
@@ -181,12 +192,16 @@ export class TrendsJob {
     });
 
     // Schedule daily cleanup at 3 AM (0 3 * * *)
-    cron.schedule('0 3 * * *', () => {
+    cron.schedule("0 3 * * *", () => {
       this.cleanupOldTrending();
     });
 
-    this.logger.success(`Trends update job scheduled: every ${interval} minutes`);
-    this.logger.success(`Cleanup job scheduled: daily at 3 AM (${retentionDays}-day retention)`);
+    this.logger.success(
+      `Trends update job scheduled: every ${interval} minutes`
+    );
+    this.logger.success(
+      `Cleanup job scheduled: daily at 3 AM (${retentionDays}-day retention)`
+    );
   }
 }
 

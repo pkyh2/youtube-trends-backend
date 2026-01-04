@@ -34,4 +34,11 @@ export class PassiveService {
     const transcripts = transcriptData.map((item) => item.transcript);
     return transcripts as string[];
   }
+
+  async addVideoVoice(speakerKey: string, voiceName: string): Promise<void> {
+    await passiveRepository.createVideoVoice({
+      speaker_key: speakerKey,
+      voice_name: voiceName,
+    });
+  }
 }

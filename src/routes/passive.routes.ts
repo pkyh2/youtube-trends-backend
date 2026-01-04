@@ -15,4 +15,8 @@ router.post("/video/transcript", (req, res) =>
 router.get("/video/transcript", (req, res) =>
   passiveController.getAllVideoTranscript(req, res)
 );
+
+router.post("/video/voice", (req, res) =>
+  passiveController.addVideoVoice(req, res)
+);
 export default router;
