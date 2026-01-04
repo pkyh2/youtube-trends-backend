@@ -39,6 +39,7 @@ export class PassiveService {
     await passiveRepository.createVideoVoice({
       speaker_key: speakerKey,
       voice_name: voiceName,
+      tts_provider: "google",
     });
   }
 }
