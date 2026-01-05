@@ -81,6 +81,7 @@ model Transcript {
 }
 
 enum Status {
+  DRAFT
   READY
   PROCESSING
   SCENES_DONE
@@ -97,7 +98,7 @@ model ShortsStory {
   tts_voice_profile   String?               @default("neutral")
   hashtags            String?
   visual_style        Json?                
-  status              Status                @default(READY)
+  status              Status                @default(DRAFT)
   is_processing       Boolean?              @default(false)
   final_video_url     String?
   youtube_video_id    String?
