@@ -125,12 +125,10 @@ model ShortsStoryScene {
   id             Int         @id @default(autoincrement())
   shorts_story_id Int
   scene_order    Int
-  narration_text String
-  on_screen_text String?
+  duration_sec   Int?
 
   image_prompt   String?
   video_prompt   String?
-  duration_sec   Int?
   
   image_url      String?
   video_url      String?
