@@ -35,11 +35,16 @@ export class PassiveService {
     return transcripts as string[];
   }
 
-  async addVideoVoice(speakerKey: string, voiceName: string): Promise<void> {
+  async addVideoVoice(
+    speakerKey: string,
+    voiceName: string,
+    ssmlGender: string
+  ): Promise<void> {
     await passiveRepository.createVideoVoice({
       speaker_key: speakerKey,
       voice_name: voiceName,
       tts_provider: "google",
+      ssml_gender: ssmlGender,
     });
   }
 }

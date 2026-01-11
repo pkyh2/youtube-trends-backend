@@ -19,4 +19,5 @@ export interface ShortsStoryVoice {
   speaker_key: string;
   voice_name: string;
   tts_provider: string;
+  ssml_gender: string;
 }

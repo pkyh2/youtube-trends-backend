@@ -53,8 +53,12 @@ export class PassiveController {
 
   async addVideoVoice(req: Request, res: Response): Promise<void> {
     try {
-      const { speakerKey, voiceName } = req.body;
-      await this.passiveService.addVideoVoice(speakerKey, voiceName);
+      const { speakerKey, voiceName, ssmlGender } = req.body;
+      await this.passiveService.addVideoVoice(
+        speakerKey,
+        voiceName,
+        ssmlGender
+      );
       res.json({
         success: true,
         data: "Video voice added successfully",
