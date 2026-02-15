@@ -100,6 +100,7 @@ model ShortsStory {
   visual_style        Json?                
   status              Status                @default(DRAFT)
   is_processing       Boolean?              @default(false)
+  folder_id           String?
   final_video_url     String?
   youtube_video_id    String?
 

@@ -1,0 +1,85 @@
+name: Deploy to Development
+
+on:
+  push:
+    branches: [dev]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: pkyh2/youtube-trends-backend
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set short SHA
+        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-${{ env.SHORT_SHA }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-latest
+
+      - name: Deploy to development server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEV_SSH_HOST }}
+          username: ${{ secrets.DEV_SSH_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          port: ${{ secrets.DEV_SSH_PORT }}
+          script: |
+            # Login to ghcr.io
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            # Pull latest image
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-latest
+
+            # Move to deploy directory
+            cd ${{ secrets.DEV_DEPLOY_PATH }}
+
+            # Ensure logs directory exists with correct permissions
+            sudo mkdir -p logs && sudo chown -R 1001:1001 logs
+
+            # Stop and restart with new image
+            docker compose down
+            docker compose up -d
+
+            # Run database migrations
+            docker exec youtube-trends-server npx prisma migrate deploy
+
+            # Run seed (initialize admin account)
+            docker exec youtube-trends-server npm run prisma:seed
+
+            # Clean up old images
+            docker image prune -f
+
+            # Health check (최대 60초 대기, 5초 간격으로 재시도)
+            echo "Waiting for health check..."
+            for i in $(seq 1 12); do
+              if curl -sf http://localhost:4000/health > /dev/null 2>&1; then
+                echo "Health check passed!"
+                exit 0
+              fi
+              echo "Attempt $i/12 failed, retrying in 5s..."
+              sleep 5
+            done
+            echo "Health check failed after 60s"
+            exit 1

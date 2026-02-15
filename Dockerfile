@@ -1,50 +1,49 @@
-# Multi-stage build for production optimization
-FROM node:22-alpine AS builder
-
+# 0. base images
+FROM node:22-alpine AS base
 WORKDIR /app
-
-# Copy dependency files
 COPY package*.json ./
-COPY prisma ./prisma/
 
-# Install all dependencies (including dev dependencies for TypeScript build)
-RUN npm ci && \
-    npm cache clean --force
+# 1. Install all dependencies (including dev) for build steps
+FROM base AS deps
+RUN npm ci
+
+# 2. Production-only dependencies for the final image
+FROM base AS prod-deps
+RUN npm ci --omit=dev
+
+# 3. Build the source code only when needed
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy build dependencies
+COPY tsconfig.json ./
+COPY prisma ./prisma
+COPY src ./src
 
 # Generate Prisma client
 RUN npx prisma generate
 
-# Copy source code
-COPY tsconfig.json ./
-COPY src ./src
-
-# Build TypeScript
+# Build TypeScript to JavaScript
 RUN npm run build
 
-# Production stage
-FROM node:22-alpine
+# 4. Production image
+FROM base AS production
 
-WORKDIR /app
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
 
-ENV NODE_ENV=production
-
-# Copy package files and install production dependencies only
-COPY package*.json ./
-RUN npm ci --only=production && \
-    npm cache clean --force
-
-# Copy built artifacts from builder
-COPY --from=builder /app/dist ./dist
+# Copy production files
+COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/dist ./dist
 
-RUN npx prisma generate
+# Create logs directory with proper permissions
+RUN mkdir -p logs && \
+    chown -R nodejs:nodejs /app/logs
 
 # Expose application port
 EXPOSE 4000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
-  CMD node -e "require('http').get('http://localhost:4000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
 # Run database migrations and start application
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run prod"]
+CMD ["npm", "run", "prod"]
