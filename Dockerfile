@@ -35,6 +35,7 @@ RUN addgroup -g 1001 -S nodejs && \
 
 # Copy production files
 COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/dist ./dist
 
