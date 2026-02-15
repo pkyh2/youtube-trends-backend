@@ -134,7 +134,6 @@ model ShortsStoryScene {
   
   image_url      String?
   video_url      String?
-  tts_audio_url  String?
   merged_video_url String?
 
   image_file_id String?
