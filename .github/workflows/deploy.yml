@@ -63,10 +63,10 @@ jobs:
             docker compose up -d
 
             # Run database migrations
-            docker exec youtube-trends-server npx prisma migrate deploy
+            docker exec youtube-trends-api-dev npx prisma migrate deploy
 
             # Run seed (initialize admin account)
-            docker exec youtube-trends-server npm run prisma:seed
+            docker exec youtube-trends-api-dev npm run prisma:seed
 
             # Clean up old images
             docker image prune -f
