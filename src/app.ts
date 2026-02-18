@@ -4,6 +4,7 @@ import trendsRoutes from "./routes/trends.routes";
 import testRoutes from "./routes/test.routes";
 import categoryRoutes from "./routes/category.routes";
 import passiveRoutes from "./routes/passive.routes";
+import adminRoutes from "./routes/admin.routes";
 
 const app: Application = express();
 
@@ -25,6 +26,7 @@ app.use("/api/trends", trendsRoutes);
 app.use("/api/test", testRoutes);
 app.use("/api/category", categoryRoutes);
 app.use("/api/passive", passiveRoutes);
+app.use("/api/admin", adminRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
