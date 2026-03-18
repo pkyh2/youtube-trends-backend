@@ -15,6 +15,16 @@ export class SupadataService {
     await new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  private hasTranscriptPayload(value: unknown): value is Transcript {
+    return (
+      typeof value === "object" &&
+      value !== null &&
+      "content" in value &&
+      "lang" in value &&
+      "availableLangs" in value
+    );
+  }
+
   private async waitForTranscriptJob(jobId: string): Promise<Transcript> {
     for (let attempt = 1; attempt <= this.maxPollAttempts; attempt += 1) {
       const jobResult = await supadata.transcript.getJobStatus(jobId);
@@ -24,6 +34,10 @@ export class SupadataService {
       }
 
       if (jobResult.status === "completed") {
+        if (this.hasTranscriptPayload(jobResult)) {
+          return jobResult;
+        }
+
         this.logger.error("Transcript job completed without result payload", {
           jobId,
           attempt,
