@@ -6,6 +6,14 @@ import { supadataService } from "./supadata.service";
 export class PassiveService {
   private logger = createLogger("passive-service");
 
+  private normalizeTranscriptContent(content: string | { text: string }[]): string {
+    if (typeof content === "string") {
+      return content;
+    }
+
+    return content.map((chunk) => chunk.text).join(" ").trim();
+  }
+
   async addChannelInfo(channelId: string): Promise<void> {
     const channelInfo = await youtubeService.getChannelInfo(channelId);
     await passiveRepository.createChannelInfo({
@@ -25,7 +33,7 @@ export class PassiveService {
     await passiveRepository.createVideoTranscript({
       channel_id: channelId,
       video_id: videoId,
-      transcript: transcriptResult.content,
+      transcript: this.normalizeTranscriptContent(transcriptResult.content),
     });
   }
 

@@ -9,12 +9,6 @@ if (!SUPADATA_API_KEY) {
   throw new Error("SUPADATA_API_KEY is not defined in environment variables");
 }
 
-export interface TranscriptResponse {
-  content: string;
-  lang: string; // ISO 639-1 language code
-  availableLangs: string[]; // List of available languages
-}
-
 // Initialize the client
 export const supadata = new Supadata({
   apiKey: SUPADATA_API_KEY,
