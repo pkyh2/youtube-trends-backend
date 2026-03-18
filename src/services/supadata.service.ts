@@ -23,6 +23,16 @@ export class SupadataService {
         return jobResult.result;
       }
 
+      if (jobResult.status === "completed") {
+        this.logger.error("Transcript job completed without result payload", {
+          jobId,
+          attempt,
+          jobResult,
+        });
+
+        throw new Error("Supadata transcript job completed without result");
+      }
+
       if (jobResult.status === "failed") {
         throw new Error(
           jobResult.error?.message || "Supadata transcript job failed"

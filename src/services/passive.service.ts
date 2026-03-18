@@ -14,9 +14,14 @@ export class PassiveService {
     return content.map((chunk) => chunk.text).join(" ").trim();
   }
 
-  async addChannelInfo(channelId: string): Promise<void> {
+  private async ensureChannelExists(channelId: string): Promise<void> {
     const channelInfo = await youtubeService.getChannelInfo(channelId);
-    await passiveRepository.createChannelInfo({
+
+    if (!channelInfo?.[0]?.snippet || !channelInfo?.[0]?.statistics) {
+      throw new Error(`Channel not found for channelId: ${channelId}`);
+    }
+
+    await passiveRepository.upsertChannelInfo({
       channel_id: channelId,
       title: channelInfo[0].snippet.title,
       description: channelInfo[0].snippet.description,
@@ -28,7 +33,13 @@ export class PassiveService {
     });
   }
 
+  async addChannelInfo(channelId: string): Promise<void> {
+    await this.ensureChannelExists(channelId);
+  }
+
   async addVideoTranscript(channelId: string, videoId: string): Promise<void> {
+    await this.ensureChannelExists(channelId);
+
     const transcriptResult = await supadataService.getTranscript(videoId);
     await passiveRepository.createVideoTranscript({
       channel_id: channelId,
